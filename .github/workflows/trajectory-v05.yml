@@ -1,0 +1,42 @@
+name: ShiftRoute-RL v0.5 trajectory-risk reproduction
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/shiftroute_rl/trajectory_v05.py'
+      - 'tests/test_trajectory_v05.py'
+      - '.github/workflows/trajectory-v05.yml'
+  workflow_dispatch:
+jobs:
+  paired-counterexample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research package
+        run: python -m pip install -e '.[research]'
+      - name: Test trajectory counterexample
+        run: python -m unittest discover -s tests -p 'test_trajectory_v05.py' -v
+      - name: Run paired 200k-episode experiment
+        run: python -m shiftroute_rl.trajectory_v05 --episodes 200000 --seed 20261023 --out results/v05/cloud_counterexample.json
+      - name: Validate results against analytic expectation
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('results/v05/cloud_counterexample.json').read_text())
+          assert abs(r['paired_risk_increase']-r['exact_theoretical_risk_increase'])<.002
+          verify_all, proof, shield=r['results']
+          assert proof['unsafe_episode_rate']>verify_all['unsafe_episode_rate']
+          assert shield['unsafe_episodes']==0
+          assert proof['reviewer_calls_per_episode']<verify_all['reviewer_calls_per_episode']
+          print('Paired trajectory counterexample independently reproduced')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shiftroute-v05-paired-trajectory-counterexample
+          path: results/v05/cloud_counterexample.json
+          retention-days: 30
