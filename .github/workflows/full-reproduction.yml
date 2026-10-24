@@ -1,0 +1,64 @@
+name: ShiftRoute-RL neural PPO and shift benchmark full reproduction
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/full-reproduction.yml'
+jobs:
+  train-and-evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU PyTorch and package
+        run: |
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install numpy
+          python -m pip install -e .
+      - name: All tests
+        run: python -m unittest discover -s tests -v
+      - name: Train all three synthetic SFT/PPO policy seeds
+        run: python -m shiftroute_rl.deep_experiment --out results/cloud_full --seeds 7 13 23 --updates 200 --batch 192 --episodes 1000
+      - name: Evaluate policy shift, perfect and imperfect reviewers
+        run: |
+          python -m shiftroute_rl.risk_budget_v03 --weights results/cloud_full/checkpoints --n 3600 --out results/v03/cloud_experiment.json
+          python -m shiftroute_rl.proof_stress_v03 --weights results/cloud_full/checkpoints --n 3600 --out results/v03/cloud_proof_stress.json
+      - name: Verify counts and modeled proof equivalence on fixed streams
+        run: |
+          python - <<'PY'
+          import json,math
+          from pathlib import Path
+          root=Path('results/cloud_full')
+          r=json.loads((root/'evaluation.json').read_text())
+          assert len(r)==72, len(r)
+          assert len(list((root/'checkpoints').glob('*.pt')))==15
+          x=json.loads(Path('results/v03/cloud_experiment.json').read_text())
+          assert len(x['records'])==150
+          for row in x['records']:
+              assert math.isfinite(row['unsafe_executed_fraction'])
+              assert math.isfinite(row['review_cost_per_action'])
+          for regime in ('stable','policy-shift','joint-shift'):
+              for seed in (41,57,73,89,101):
+                  for sensitivity in (1.0,0.94):
+                      pair=[v for v in x['records'] if v['regime']==regime and v['stream_seed']==seed and v['reviewer_sensitivity']==sensitivity]
+                      a=next(v for v in pair if v['mode']=='all')
+                      b=next(v for v in pair if v['mode']=='proof')
+                      assert a['unsafe_executed_count']==b['unsafe_executed_count']
+          assert len(json.loads(Path('results/v03/cloud_proof_stress.json').read_text())['records'])==40
+          print('Full neural-policy and v0.3 fixed-stream reproduction passed')
+          PY
+      - name: Archive cloud-trained weights and full numerical records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shiftroute-full-neural-training-and-shift-benchmarks
+          path: |
+            results/cloud_full/
+            results/v03/cloud_experiment.json
+            results/v03/cloud_proof_stress.json
+          retention-days: 30
+          if-no-files-found: warn
