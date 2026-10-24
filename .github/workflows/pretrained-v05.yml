@@ -1,0 +1,60 @@
+name: ShiftRoute-RL v0.5 pretrained LoRA PPO calibration experiment
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pretrained-v05.yml'
+      - 'src/shiftroute_rl/llm_trial_v05.py'
+  workflow_dispatch:
+jobs:
+  extended-pretrained-lm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      OMP_NUM_THREADS: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned pretrained experiment dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==4.46.3' 'peft==0.14.0' 'accelerate==1.1.1' 'numpy>=1.26,<3' 'huggingface_hub>=0.25,<1'
+          python -m pip install -e .
+      - name: Test code
+        run: python -m unittest discover -s tests -v
+      - name: Train longer SFT and multi-epoch PPO with held-out calibration
+        run: |
+          python -m shiftroute_rl.llm_trial_v05 --model HuggingFaceTB/SmolLM2-135M-Instruct \
+            --seed 13 --sft-steps 180 --rl-steps 70 --ppo-epochs 3 \
+            --batch 8 --eval 256 --output results/v05/llm_extended
+      - name: Verify trained LoRA checkpoints and metrics
+        run: |
+          python - <<'PY'
+          import json,math
+          from pathlib import Path
+          root=Path('results/v05/llm_extended')
+          r=json.loads((root/'metrics.json').read_text())
+          assert len(r)==3
+          for x in r:
+              assert x['n']==256
+              assert 0 <= x['unauthorized_approval_rate'] <= 1
+              assert 0 <= x['calibrated']['unauthorized_approval_rate'] <= 1
+              assert math.isfinite(x['calibration_balanced_accuracy'])
+          assert len(list(root.glob('adapter_*/*.safetensors')))==3
+          cfg=json.loads((root/'config.json').read_text())
+          assert cfg['ppo_epochs']==3
+          print('Extended 135M SFT and PPO weights validated, including calibration')
+          PY
+      - name: Upload pretrained adapters, resolved model revision, results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shiftroute-v05-smollm2-135m-calibrated-ppo
+          path: results/v05/llm_extended/
+          retention-days: 30
+          if-no-files-found: warn
