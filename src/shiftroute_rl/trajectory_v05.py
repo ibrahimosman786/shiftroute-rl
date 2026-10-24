@@ -77,3 +77,24 @@ def main():
     print(json.dumps(result,indent=2))
 
 if __name__=='__main__':main()
+
+
+def trajectory_gap_upper_bound(conditional_first_divergence_hazards: list[float]) -> float:
+    """Conservative bound on probability of different *entire* trajectories.
+
+    Assumes shared random seeds/history until first divergence and a VALID
+    conditional upper bound d_t on Pr(first mismatch at t | no earlier mismatch)
+    uniformly over possible shared histories. This does not infer hazards from
+    a detector's scores or past empirical calibration alone.
+
+    By multiplying conditional survival lower bounds,
+        Pr(any divergence) <= 1 - product_t (1-d_t).
+    Any [0,1]-valued episode safety outcome can differ in expectation by at
+    most this bound, via a coupling inequality. Usually loose under shift.
+    """
+    survival=1.0
+    for d in conditional_first_divergence_hazards:
+        if not 0 <= d <= 1:
+            raise ValueError('conditional mismatch hazard outside [0,1]')
+        survival*=1.0-d
+    return max(0.,min(1.,1.0-survival))
