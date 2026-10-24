@@ -73,3 +73,18 @@ python -m shiftroute_rl.trajectory_v05 --episodes 200000 --seed 20261023 --out r
 ```
 
 The cloud workflow `.github/workflows/trajectory-v05.yml` reruns this and archives the JSON.
+
+
+## A quantitative fallback when exact trajectory equivalence is impossible
+
+Let two gates share the same randomness and agent/environment trajectory until their first **observable** difference. Define δ_t as a *valid history-uniform conditional upper bound* on the probability that the first divergence occurs at step t, given none previously. Then
+
+```
+P(trajectories diverge by T) ≤ 1 - product_{t=1}^T (1-δ_t).
+```
+
+For any bounded episode-level bad-outcome indicator, the difference in expected bad-outcome rates is no greater in absolute value than this trajectory divergence bound, by coupling. No independence across time is needed if the per-step conditional hazard bound is valid. Proof: recursively lower-bound survival of the equal-history event by `1-δ_t`, then apply the elementary bound that two coupled indicators differ only when histories diverge.
+
+In a sound-certificate system with otherwise identical gate outputs, a possible mismatch can arise when a reviewer **falsely denies a certified legitimate action**. Invalid certificates can create additional mismatches; monitor observability, timing, or gate side effects may also cause mismatches, so they must be counted in a real system.
+
+In the v0.5 two-step counterexample `[0.15, 0]` bounds episode risk difference by 15 percentage points, versus the observed 1.1815 points. This is deliberately conservative and does **not** certify future model behavior: unverified hazard estimates or changing environments invalidate it. The result is a conditional coupling inequality, not a new claim to have solved imperfect-verifier RL.
