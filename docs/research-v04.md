@@ -35,3 +35,18 @@ python -m shiftroute_rl.llm_trial_v04 --seed 7 --sft-steps 24 --rl-steps 24 --ba
 ```
 
 **Status:** A credible negative result and a restricted solution, not a general solution or novel state-of-the-art safety algorithm. Independent peer review requires researchers outside this project to evaluate the work; a GitHub pull request to one's own repository is not independent peer review.
+
+
+## Actual pretrained experiment outcome (verified cloud run, October 2026)
+
+The [GitHub Actions run](https://github.com/ibrahimosman786/shiftroute-rl/actions/runs/40066426969) completed successfully on CPU and published adapter checkpoints ([artifact](https://github.com/ibrahimosman786/shiftroute-rl/actions/runs/40066426969/artifacts/12550075024)). This replaces the earlier pre-execution status statement above.
+
+- Base: `HuggingFaceTB/SmolLM2-135M-Instruct`, small causal LM; LoRA SFT 24 updates, PPO-style 24 updates each under weak and verified synthetic rewards, single seed 7.
+- Evaluation: 128 held-out shifted synthetic authorization prompts. **All three checkpoints predicted ALLOW for all 128 prompts.**
+- After SFT: accuracy 0.5390625; unauthorized approvals as fraction of all proposals 0.4609375; false refusals 0.
+- After weak PPO-style RL: identical values.
+- After independently verified PPO-style RL: identical values.
+- **This is a degenerate negative result.** It is not evidence of improved safety, model generalization or useful policy learning. A trivial always-ALLOW baseline matches all three evaluated variants.
+- With just one PPO gradient update per sampled minibatch, the clipped ratio starts at one and the method is best described as *PPO-style single-update policy gradient*, not an extensively optimized PPO implementation.
+
+A separate `llm_trial_v05.py` and [extended-training workflow](../.github/workflows/pretrained-v05.yml) now use more SFT updates, multiple PPO epochs and threshold calibration on independent train-format examples. Results remain **unverified** until that workflow completes. Neither experiment is a multi-turn tool-using pretrained language agent.
