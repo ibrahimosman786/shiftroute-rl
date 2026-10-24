@@ -1,0 +1,64 @@
+{
+  "experiment": "Sound certificates can worsen episode-level harm under trajectory feedback",
+  "synthetic": true,
+  "config": {
+    "episodes": 200000,
+    "seed": 20261023,
+    "false_denial_probability": 0.15,
+    "unsafe_miss_probability": 0.08,
+    "review_cost": 1.0,
+    "proof_check_cost": 0.01,
+    "transition_check_cost": 0.02
+  },
+  "results": [
+    {
+      "method": "verify_all",
+      "unsafe_episodes": 13592,
+      "unsafe_episode_rate": 0.06796,
+      "unsafe_episode_rate_ci95": [
+        0.06686527362339607,
+        0.06907132269652246
+      ],
+      "legitimate_progress_rate": 0.85008,
+      "reviewer_calls_per_episode": 1.85008,
+      "cost_units_per_episode": 1.85008,
+      "independent_stateful_authorization": false
+    },
+    {
+      "method": "sound_proof_first",
+      "unsafe_episodes": 15955,
+      "unsafe_episode_rate": 0.079775,
+      "unsafe_episode_rate_ci95": [
+        0.07859561017496264,
+        0.08097053228531365
+      ],
+      "legitimate_progress_rate": 1.0,
+      "reviewer_calls_per_episode": 1.0,
+      "cost_units_per_episode": 1.01,
+      "independent_stateful_authorization": false
+    },
+    {
+      "method": "sound_proof_plus_stateful_shield",
+      "unsafe_episodes": 0,
+      "unsafe_episode_rate": 0.0,
+      "unsafe_episode_rate_ci95": [
+        0.0,
+        1.9206925190409665e-05
+      ],
+      "legitimate_progress_rate": 1.0,
+      "reviewer_calls_per_episode": 1.0,
+      "cost_units_per_episode": 1.03,
+      "independent_stateful_authorization": true
+    }
+  ],
+  "paired_added_unsafe_episodes": 2363,
+  "paired_risk_increase": 0.011815,
+  "paired_risk_increase_ci95": [
+    0.011350734722272764,
+    0.012298018343275399
+  ],
+  "exact_theoretical_risk_increase": 0.012,
+  "proof_first_equivalence_on_fixed_proposals": true,
+  "trajectory_equivalence_holds": false,
+  "note": "Transition shield assumes exact independently enforced policy, not AI monitor confidence."
+}

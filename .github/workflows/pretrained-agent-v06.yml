@@ -1,0 +1,56 @@
+name: ShiftRoute-RL v0.6 three-step pretrained tool-policy trial
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pretrained-agent-v06.yml'
+      - 'src/shiftroute_rl/agent_trial_v06.py'
+  workflow_dispatch:
+jobs:
+  train-sequential-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      OMP_NUM_THREADS: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install experiment dependencies
+        run: |
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==4.46.3' 'peft==0.14.0' 'accelerate==1.1.1' 'numpy>=1.26,<3' 'huggingface_hub>=0.25,<1'
+          python -m pip install -e .
+      - name: Test full project
+        run: python -m unittest discover -s tests -v
+      - name: Fine-tune pretrained three-stage synthetic tool agent
+        run: |
+          python -m shiftroute_rl.agent_trial_v06 --seed 23 --sft-steps 125 --rl-steps 48 --ppo-epochs 2 --batch 6 --eval 80 --output results/v06/cloud
+      - name: Validate model checkpoints and task metrics
+        run: |
+          python - <<'PY'
+          import json, math
+          from pathlib import Path
+          root=Path('results/v06/cloud')
+          rows=json.loads((root/'metrics.json').read_text())
+          assert len(rows)==3
+          assert all(x['n_episodes']==80 for x in rows)
+          for x in rows:
+              assert math.isfinite(x['complete_task_rate'])
+              assert math.isfinite(x['unsafe_attempts_per_episode'])
+              assert 0<=x['complete_task_rate']<=1
+              assert 0<=x['unsafe_attempts_per_episode']<=3
+          assert len(list(root.glob('adapter_*/*.safetensors')))==3
+          print('Real three-step synthetic pretrained LM adaptation ran, all metrics finite')
+          PY
+      - name: Upload trained adapters and sequential evaluation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shiftroute-v06-smollm2-three-step-agent
+          path: results/v06/cloud/
+          retention-days: 30
+          if-no-files-found: warn
