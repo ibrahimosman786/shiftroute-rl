@@ -34,3 +34,14 @@ python -m shiftroute_rl.risk_budget_v03 --n 3600 --out results/v03/reproduced.js
 Research on auditing and verifier-error feedback already exists. Compare [GRAFT](https://alignment.anthropic.com/2026/graft/), [Verifier Errors in RLVR](https://arxiv.org/abs/2609.35677), [Conformal Selective Acting](https://arxiv.org/abs/2605.20270) and [AgentDojo](https://github.com/ethz-spylab/agentdojo). We have **not** established scientific novelty, pretrained multi-turn agent generalization, or an accepted upstream open-source contribution.
 
 See `docs/research-v03.md`, `docs/research-v04.md`, and `docs/RESEARCH_STATUS.md` for the evidence hierarchy.
+
+
+## Research update: adaptive trajectories and sequential pretrained agents (v0.5/v0.6)
+
+- **[v0.5: policy-closed verification research note](docs/policy-closed-research-note-v05.md)** proves by counterexample that sound per-action certificates do **not** generally preserve episode-level safety when reviewer false refusals alter an adapting agent's future state. The 200,000-episode result [reproduced successfully in GitHub Actions](https://github.com/ibrahimosman786/shiftroute-rl/actions/runs/40066518102).
+- The original three-seed PyTorch PPO + shift evaluation, including **15 model weights**, successfully [retrained from scratch in the dedicated repository](https://github.com/ibrahimosman786/shiftroute-rl/actions/runs/40066573854).
+- An actual pretrained `SmolLM2-135M-Instruct` LoRA and PPO-style experiment [completed in the cloud](https://github.com/ibrahimosman786/shiftroute-rl/actions/runs/40066426969), but produced an **all-ALLOW policy in all three phases**, a negative result. Do not claim better safety.
+- The newer `llm_trial_v05.py` adds longer SFT, multi-epoch PPO, and independent calibration; publish its metrics only after the extended cloud workflow finishes.
+- **[v0.6 experimental sequential language policy](src/shiftroute_rl/agent_trial_v06.py)** chooses among four symbolic tool actions conditioned on a three-step history and untrusted observations. It has tests and a cloud fine-tuning workflow, but **does not invoke real tools**, use real AgentDojo tasks, or prove novel policy-safety results. The workflow has no validated outcome until it completes successfully.
+
+**The headline remains an open research question**, with a conditional engineering boundary and documented counterexamples, not a solved universal reward-hacking problem.
