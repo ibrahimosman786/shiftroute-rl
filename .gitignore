@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.DS_Store
+results/reproduced/
+results/cloud_full/
+results/smoke/
+results/v04/llm-cloud/
