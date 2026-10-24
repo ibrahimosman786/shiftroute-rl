@@ -24,14 +24,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install 'transformers==4.46.3' 'peft==0.14.0' 'accelerate==1.1.1' 'numpy>=1.26,<3' 'huggingface_hub>=0.25,<1'
-          python -m pip install -e research/shiftroute-rl
+          python -m pip install -e .
       - name: Validate tests on cloud
         run: |
-          cd research/shiftroute-rl
+          cd .
           python -m unittest discover -s tests -v
       - name: Fine-tune pretrained SmolLM2 policy with SFT and two PPO reward conditions
         run: |
-          cd research/shiftroute-rl
+          cd .
           python -m shiftroute_rl.llm_trial_v04 --model HuggingFaceTB/SmolLM2-135M-Instruct \
             --seed 7 --sft-steps 24 --rl-steps 24 --batch 6 --eval 128 \
             --output results/v04/llm-cloud
