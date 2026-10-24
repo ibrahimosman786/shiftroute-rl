@@ -27,3 +27,16 @@ class TrajectoryCounterexampleTests(unittest.TestCase):
         with self.assertRaises(ValueError):experiment(Config(episodes=0))
         with self.assertRaises(ValueError):experiment(Config(unsafe_miss_probability=1.01))
         with self.assertRaises(ValueError):wilson_interval(-1,100)
+
+    def test_adaptive_coupling_upper_bound(self):
+        from shiftroute_rl.trajectory_v05 import trajectory_gap_upper_bound
+        self.assertAlmostEqual(trajectory_gap_upper_bound([.15,0]),.15)
+        self.assertAlmostEqual(trajectory_gap_upper_bound([.1,.2]),.28)
+        self.assertEqual(trajectory_gap_upper_bound([]),0.)
+        self.assertEqual(trajectory_gap_upper_bound([1.]),1.)
+        with self.assertRaises(ValueError):
+            trajectory_gap_upper_bound([-.01])
+        # The observed v0.5 paired increase cannot exceed divergence at unlock.
+        observed=experiment(Config(episodes=200000,seed=20261023))
+        self.assertLessEqual(observed['paired_risk_increase'],
+                             trajectory_gap_upper_bound([.15,0]))
